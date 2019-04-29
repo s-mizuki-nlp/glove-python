@@ -57,3 +57,43 @@ def build_coocurrence_matrix(sentences):
                          shape=(len(dictionary),
                                 len(dictionary)),
                          dtype=np.float32).tocsr().tocoo()
+
+
+def build_coocurrence_matrix_wo_weighting_symmetric(sentences):
+
+    dictionary = {}
+    rows = []
+    cols = []
+    data = array.array('f')
+
+    window = 10
+
+    for sentence in sentences:
+        for i, first_word in enumerate(sentence):
+            first_word_idx = dictionary.setdefault(first_word,
+                                                   len(dictionary))
+            for second_word in sentence[i:i + window + 1]:
+                second_word_idx = dictionary.setdefault(second_word,
+                                                        len(dictionary))
+
+                distance = 1.0
+
+                if first_word_idx == second_word_idx:
+                    pass
+                elif first_word_idx < second_word_idx:
+                    rows.append(first_word_idx)
+
+                    cols.append(second_word_idx)
+                    data.append(np.float32(1.0) / distance)
+                else:
+                    rows.append(second_word_idx)
+                    cols.append(first_word_idx)
+                    data.append(np.float32(1.0) / distance)
+
+    ret = sp.coo_matrix((data, (rows, cols)),
+                         shape=(len(dictionary),
+                                len(dictionary)),
+                         dtype=np.float32).tocsr().tocoo()
+    ret = (ret + ret.T).tocoo()
+
+    return ret

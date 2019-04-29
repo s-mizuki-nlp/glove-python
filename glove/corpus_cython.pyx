@@ -215,7 +215,7 @@ cdef int words_to_ids(list words, vector[int]& word_ids,
 
 
 def construct_cooccurrence_matrix(corpus, dictionary, int supplied,
-                                  int window_size, int ignore_missing):
+                                  int window_size, int ignore_missing, int distance_weighting):
     """
     Construct the word-id dictionary and cooccurrence matrix for
     a given corpus, using a given window size.
@@ -257,7 +257,8 @@ def construct_cooccurrence_matrix(corpus, dictionary, int supplied,
 
             window_stop = int_min(i + window_size + 1, wordslen)
 
-            for j in range(i, window_stop):
+#            for j in range(i, window_stop):
+            for j in range(i+1, window_stop):
                 inner_word = word_ids[j]
 
                 if inner_word == -1:
@@ -267,16 +268,18 @@ def construct_cooccurrence_matrix(corpus, dictionary, int supplied,
                 if inner_word == outer_word:
                     continue
 
+                weight = 1.0 / (j-i) if distance_weighting == 1 else 1.0
+
                 if inner_word < outer_word:
                     increment_matrix(matrix,
                                      inner_word,
                                      outer_word,
-                                     1.0 / (j - i))
+                                     weight)
                 else:
                     increment_matrix(matrix,
                                      outer_word,
                                      inner_word,
-                                     1.0 / (j - i))
+                                     weight)
 
     # Create the matrix.
     mat = matrix_to_coo(matrix, len(dictionary))

@@ -10,6 +10,7 @@ from glove import Corpus
 from glove.glove import check_random_state
 
 from utils import (build_coocurrence_matrix,
+                   build_coocurrence_matrix_wo_weighting_symmetric,
                    generate_training_corpus)
 
 
@@ -34,6 +35,47 @@ def test_corpus_construction():
     assert (model.matrix.todense().tolist()
             == expected)
 
+def test_corpus_construction_wo_weighting():
+
+    corpus_words = ['a', 'naïve', 'fox']
+    corpus = [corpus_words]
+
+    model = Corpus()
+    model.fit(corpus, window=10, distance_weighting=False)
+
+    for word in corpus_words:
+        assert word in model.dictionary
+
+    assert model.matrix.shape == (len(corpus_words),
+                                  len(corpus_words))
+
+    expected = [[0.0, 1.0, 1.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, 0.0]]
+
+    assert (model.matrix.todense().tolist()
+            == expected)
+
+def test_corpus_construction_symmetric():
+
+    corpus_words = ['a', 'naïve', 'fox']
+    corpus = [corpus_words]
+
+    model = Corpus()
+    model.fit(corpus, window=10, symmetric=True)
+
+    for word in corpus_words:
+        assert word in model.dictionary
+
+    assert model.matrix.shape == (len(corpus_words),
+                                  len(corpus_words))
+
+    expected = [[0.0, 1.0, 0.5],
+                [1.0, 0.0, 1.0],
+                [0.5, 1.0, 0.0]]
+
+    assert (model.matrix.todense().tolist()
+            == expected)
 
 def test_supplied_dictionary():
 
@@ -113,6 +155,25 @@ def test_large_corpus_construction():
 
     matrix = corpus.matrix.tocsr().tocoo()
     check_matrix = build_coocurrence_matrix(generate_training_corpus(num_sentences,
+                                                                     seed=seed))
+
+    assert (matrix.row == check_matrix.row).all()
+    assert (matrix.col == check_matrix.col).all()
+    assert np.allclose(matrix.data, check_matrix.data)
+    assert (matrix.data > 0).all()
+
+
+def test_large_corpus_construction_wo_weighting_symmetric():
+
+    num_sentences = 5000
+    seed = 10
+
+    corpus = Corpus()
+
+    corpus.fit(generate_training_corpus(num_sentences, seed=seed), distance_weighting=False, symmetric=True)
+
+    matrix = corpus.matrix.tocsr().tocoo()
+    check_matrix = build_coocurrence_matrix_wo_weighting_symmetric(generate_training_corpus(num_sentences,
                                                                      seed=seed))
 
     assert (matrix.row == check_matrix.row).all()
